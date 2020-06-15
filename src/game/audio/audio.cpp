@@ -173,6 +173,7 @@ int16_t g_SampleType;
 BOOL Attempt_Audio_Restore(LPDIRECTSOUNDBUFFER sound_buffer);
 void CALLBACK Sound_Timer_Callback(UINT uID = 0, UINT uMsg = 0, DWORD_PTR dwUser = 0, DWORD_PTR dw1 = 0, DWORD_PTR dw2 = 0);
 #endif
+#ifndef GDALERT
 int Simple_Copy(void **source, int *ssize, void **alternate, int *altsize, void **dest, int size);
 int Sample_Copy(SampleTrackerType *st, void **source, int *ssize, void **alternate, int *altsize, void *dest, int size,
     SoundCompressType sound_comp, void *trailer, int16_t *trailersize);
@@ -1836,3 +1837,98 @@ int Sample_Copy(SampleTrackerType *st, void **source, int *ssize, void **alterna
 
     return datasize;
 }
+
+#else // !GDALERT
+
+/**
+ * Simple copies one buffer to another.
+ */
+int Simple_Copy(void **source, int *ssize, void **dest, int size)
+{
+    int out = 0;
+
+    if (*source == nullptr || *ssize == 0) {
+        return out;
+    }
+
+    int s = size;
+
+    if (*ssize < size) {
+        s = *ssize;
+    }
+
+    memcpy(*dest, *source, s);
+    *source = static_cast<char *>(*source) + s;
+    *ssize -= s;
+    *dest = static_cast<char *>(*dest) + s;
+    out = s;
+
+    if ((size - s) == 0) {
+        return out;
+    }
+
+    out = Simple_Copy(source, ssize, dest, (size - s)) + s;
+
+    return out;
+}
+
+/**
+ * Copies one buffer to another, decompressing if needed.
+ */
+int Sample_Copy(ADPCMStreamType *st, void **source, int *ssize, void *dest, int size, void *uncompbuf)
+{
+    int datasize = 0;
+
+    while (size > 0) {
+        uint16_t fsize;
+        uint16_t dsize;
+        unsigned magic;
+
+        void *fptr = &fsize;
+        void *dptr = &dsize;
+        void *mptr = &magic;
+
+        // Verify and seek over the chunk header.
+        if (Simple_Copy(source, ssize, &fptr, sizeof(fsize)) < sizeof(fsize)) {
+            break;
+        }
+
+        if (Simple_Copy(source, ssize, &dptr, sizeof(dsize)) < sizeof(dsize) || dsize > size) {
+            break;
+        }
+
+        if (Simple_Copy(source, ssize, &mptr, sizeof(magic)) < sizeof(magic) || magic != AUD_CHUNK_MAGIC_ID) {
+            break;
+        }
+
+        if (fsize == dsize) {
+            // File size matches size to decompress, so there's nothing to do other than copy the buffer over.
+            if (Simple_Copy(source, ssize, &dest, fsize) < dsize) {
+                return datasize;
+            }
+        } else {
+            // Else we need to decompress it.
+            void *uptr = uncompbuf;
+
+            if (Simple_Copy(source, ssize, &uptr, fsize) < fsize) {
+                return datasize;
+            }
+
+            else {
+                st->m_Source = uncompbuf;
+                st->m_Dest = dest;
+
+                ADPCM_Decompress(st, dsize);
+            }
+
+            dest = reinterpret_cast<char *>(dest) + dsize;
+        }
+
+        datasize += dsize;
+        size -= dsize;
+    }
+
+    return datasize;
+}
+
+#endif // GDALERT

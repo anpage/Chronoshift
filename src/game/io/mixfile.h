@@ -21,7 +21,9 @@
 #include "always.h"
 #include "basefile.h"
 #include "buffer.h"
+#ifndef GDALERT
 #include "cd.h"
+#endif // !GDALERT
 #include "crc.h"
 #include "endiantype.h"
 #include "filestraw.h"
@@ -30,7 +32,9 @@
 #include "rndstraw.h"
 #include "sha.h"
 #include "shastraw.h"
+#ifndef GDALERT
 #include "startup.h"
+#endif // !GDALERT
 #include <captainslog.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -164,9 +168,11 @@ MixFileClass<FC>::MixFileClass(const char *filename, PKey *key) :
     captainslog_assert(filename != nullptr);
     captainslog_assert(key != nullptr);
 
+#ifndef GDALERT
     if (!Force_CD_Available(g_RequiredCD)) {
         Emergency_Exit(0xFF);
     }
+#endif // !GDALERT
 
     // Create a working file class to handle our mix file.
     FC file(filename);

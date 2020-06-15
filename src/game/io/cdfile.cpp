@@ -172,6 +172,7 @@ int CDFileClass::Set_Search_Drives(const char *path)
                 snprintf(&path_buffer[strlen(path_buffer)], sizeof(path_buffer) - strlen(path_buffer), "%s", CD_PATH_SEP);
             }
 
+#ifndef GDALERT
             // Check if we have our "disk drive" prefix, if so we need to check which
             // disk we are dealing with.
             // captainslog_debug("Checking if '%s' is a CD path.", path_buffer);
@@ -197,9 +198,12 @@ int CDFileClass::Set_Search_Drives(const char *path)
 #endif // PLATFORM_WINDOWS
 
             } else {
+#endif // !GDALERT
                 paths_set = true;
                 Add_Search_Drive(path_buffer);
+#ifndef GDALERT
             }
+#endif // !GDALERT
         }
     }
 

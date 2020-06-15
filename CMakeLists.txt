@@ -126,11 +126,14 @@ option(LOGGING "Enable debug logging." ${DEFAULT_LOGGING})
 option(ASSERTIONS "Enable debug assertions." ${DEFAULT_ASSERTIONS})
 option(USE_SDL2 "Enable SDL2 for graphics and input handling." OFF)
 option(USE_OPENAL "Enable OpenAL for audio output." OFF)
+option(GDALERT "Build a subset of the code as a library for GDAlert." OFF)
 
-# Adjust size of time_t for original binary abi.
-if(WIN32 OR "${CMAKE_SYSTEM}" MATCHES "Windows")
-    if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT STANDALONE)
-        add_definitions(-D_USE_32BIT_TIME_T) # This is for ABI compatibility with a few functions, remove when original binary no longer required.
+if(NOT GDALERT)
+    # Adjust size of time_t for original binary abi.
+    if(WIN32 OR "${CMAKE_SYSTEM}" MATCHES "Windows")
+        if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND NOT STANDALONE)
+            add_definitions(-D_USE_32BIT_TIME_T) # This is for ABI compatibility with a few functions, remove when original binary no longer required.
+        endif()
     endif()
 endif()
 
@@ -141,24 +144,26 @@ if(MINGW)
 endif()
 
 # Check for libraries we plan to build against.
-if(USE_SDL2)
-    find_package(SDL2 REQUIRED)
-else()
-    list(APPEND DX_PACKAGES ddraw)
-endif()
+if(NOT GDALERT)
+    if(USE_SDL2)
+        find_package(SDL2 REQUIRED)
+    else()
+        list(APPEND DX_PACKAGES ddraw)
+    endif()
 
-if(USE_OPENAL)
-    find_package(OpenAL REQUIRED)
-else()
-    list(APPEND DX_PACKAGES dsound)
-endif()
+    if(USE_OPENAL)
+        find_package(OpenAL REQUIRED)
+    else()
+        list(APPEND DX_PACKAGES dsound)
+    endif()
 
-if(NOT USE_SDL2 OR NOT USE_OPENAL)
-    find_package(DirectX REQUIRED ${DX_PACKAGES})
-endif()
+    if(NOT USE_SDL2 OR NOT USE_OPENAL)
+        find_package(DirectX REQUIRED ${DX_PACKAGES})
+    endif()
 
-# Add LZO compression for save game support
-find_package(LZO)
+    # Add LZO compression for save game support
+    find_package(LZO)
+endif()
 
 # Set where the build results will end up
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -177,7 +182,7 @@ endif()
 # Add base module
 add_subdirectory(libs/baseconfig EXCLUDE_FROM_ALL)
 
-if(NOT STANDALONE)
+if(NOT STANDALONE AND NOT GDALERT)
     set(SETSAIL_ENTRY 0x005D6148)
     set(SETSAIL_DLL "${PROJECT_NAME}.dll")
     set(SETSAIL_EXE "ra95.dat")

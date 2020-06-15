@@ -14,9 +14,13 @@
  *            LICENSE
  */
 #include "gamefile.h"
+#ifndef GDALERT
 #include "cd.h"
+#endif // !GDALERT
 #include "mixfile.h"
+#ifndef GDALERT
 #include "startup.h"
+#endif // !GDALERT
 #include <new>
 #include <stdio.h>
 #include <string.h>
@@ -40,9 +44,11 @@ void GameFileClass::Error(int error, BOOL can_retry, const char *filename)
 {
     RawFileClass::Error(error, can_retry, filename);
 
+#ifndef GDALERT
     if (!Force_CD_Available(g_RequiredCD)) {
         Emergency_Exit(0xFF);
     }
+#endif // !GDALERT
 }
 
 int GameFileClass::Write(const void *buffer, int length)
